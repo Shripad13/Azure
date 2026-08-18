@@ -123,4 +123,7 @@ You want your team focused more on applications than maintaining Kubernetes cont
 “AKS gives us managed Kubernetes control-plane operations and strong Azure integration, so we focus mainly on worker nodes, workloads and application reliability.”
 
 
-## AKS ##
+
+If multiple Nodes then go for EFS PVC
+If single Node then go for EBS PVC
+You can also mention default storage class for pvc
