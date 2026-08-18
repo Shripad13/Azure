@@ -3,6 +3,10 @@
 
 In our organization we have microservices architecture based application and we implemented the CI using Azure pipelines and CD using the GitOps approach.
 Continuous Integration (CI):
+
+Dev --> Git --> Unit Test --> Static Code Analysis --> Build --> N2N Testing --> Docker image --> Push to artifactory (ACR/ECR/Dockerhub)
+
+
 Developer commits code change on Azure repo/github, 
 Triggers on code changes.
 Clones code from repository.
@@ -14,6 +18,8 @@ Update script for newly created image in the K8s YAML manifest file or Helm char
 
 
 Continuous Delivery (CD):
+
+
 
 CD Triggers on successful CI completion or manually.
 ArgoCD picks up the new image and deploys into AKS Cluster

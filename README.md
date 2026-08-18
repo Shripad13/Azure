@@ -121,3 +121,6 @@ You want strong Azure integration.
 You want Entra ID, Azure RBAC, Azure networking, Azure Monitor, ACR, Key Vault, etc.
 You want your team focused more on applications than maintaining Kubernetes control-plane infrastructure.
 “AKS gives us managed Kubernetes control-plane operations and strong Azure integration, so we focus mainly on worker nodes, workloads and application reliability.”
+
+
+## AKS ##
