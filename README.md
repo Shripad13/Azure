@@ -129,3 +129,58 @@ You want your team focused more on applications than maintaining Kubernetes cont
 If multiple Nodes then go for EFS PVC
 If single Node then go for EBS PVC
 You can also mention default storage class for pvc
+
+AKS Node pool will have virtual machine scale set service
+Image repository - Container registry
+
+# Monitoring
+
+L6 - Other Azure components - VM, Blob, etc - Use Azure Monitor
+L5 - Application Performance Monitoring - Use Azure Application Insights in Monitor service
+L4 - Pods, containers  - Using Prometheus/ Manged Prometheus
+L3 - EKS Control plane - Use Azure Monitor
+L2 - Nodes, Node Pools - Using Prometheus/ Manged Prometheus
+L1 - Network Components - Using Network watcher Service 
+
+
+## Azure Key vault
+Using CSI Driver Pod gets secret from Keyvault
+1. Create a resource group and create a AKS Cluster
+2. Enable addons such as azure-keyvault-secrets-provider and oidc-cluster
+
+--enable -addons azure-keyvault-secrets-provider --enable-oidc-issuer --enable-workload-identity
+
+secret store CSI driver is a special kind of 
+CSI driver gives capability to pod for communicating external solutions
+
+Create a Managed Idenitity, Allow pod to talk to instance of Azure Vault key 
+Integrate service account of pod with managed identity using this managed identity pod will access the secrets in key vault
+
+
+[ AKS Pod ] ---> Uses a Kubernetes Service Account 
+                    │
+                    ▼ (Authenticated via Microsoft Entra Workload ID)
+[ Secrets Store CSI Driver ] ---> Fetches secrets from ---> [ Azure Key Vault ]
+                    │
+                    ▼ (Mounts secret securely)
+[ Pod File System (/mnt/secrets) ] 
+
+1. The Pod is assigned a standard Kubernetes Service Account.
+2. Microsoft Entra Workload ID maps that Kubernetes service account directly to an Azure Managed Identity.
+3. The CSI Driver uses this identity to securely authenticate against Azure Key Vault, pulls the keys defined in your SecretProviderClass configuration, and maps them directly into your container.
+
+4. Create a Secret store CSI
+5. Install relevant provider - Azure vault 
+6. when one resource wants to talk to other resource then we create Managed Identity
+7. Create a Service account and integrate with Managed Identity
+
+OIDC Issuer URL required to connect Service Account of AKS pod with Manged Identity
+
+We will assign the Secret provider Class to the pod and within pod it should access object
+
+
+# Why Terraform when you have ARM template, UI, CLI, Bicep, SDK?
+1. Platform agnostics - supports multi-cloud   
+2. Reusability
+3. Version controlled
+4. 
