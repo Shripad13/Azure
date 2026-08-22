@@ -19,7 +19,14 @@ Update script for newly created image in the K8s YAML manifest file or Helm char
 
 Continuous Delivery (CD):
 
+Repo --> Build --> Push to ECR --> Update (shell) script) --> Repo(looks for Image & integrates to GitOps/ArgoCD) --> GitOps --> K8s
 
+Git repositories as the single source of truth.
+COntinuous reconcilation of ArgoCD to Git and push image to K8s CLuster
+If someone changes the k8s cluster then ArgoCD detects as Drift
+GitOps does not allow manual change to k8s cluster
+ 
+ Git --<-- GitOps(ArgoCD) -->-- K8s
 
 CD Triggers on successful CI completion or manually.
 ArgoCD picks up the new image and deploys into AKS Cluster

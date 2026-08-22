@@ -53,8 +53,10 @@ Commands Used Almost Daily by DevOps Engineers
 | `az pipelines run`              | Trigger Azure DevOps pipelines           |
 
 
+az account set --subscription "Learning Subscription"
 
-# Azure DevOps 
+
+# Azure DevOps   
 Platform which have collection of cloud services used by Devops Engineers will improve the SDLC process & Release cycle time.
 
 Azure Boards: Plan and track tasks. Use agile boards and lists to see who does what.
