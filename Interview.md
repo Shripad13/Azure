@@ -45,6 +45,11 @@ Scenario: Your application uses Docker containers. How would you integrate ACR w
 
 Answer: Describe the process of configuring Docker tasks in the pipeline to build images, authenticate with ACR using service connections, push images to the registry, and deploy them to specific environments.
 
+stages:
+  stage:
+    jobs:
+Use connection store    
+
 4. Debugging Pipeline Failures:
 Scenario: Your pipeline consistently fails at a specific stage. How would you approach troubleshooting and identifying the root cause of the issue?
 
