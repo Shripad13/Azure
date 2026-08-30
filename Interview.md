@@ -3,6 +3,10 @@
 
 In our organization we have microservices architecture based application and we implemented the CI using Azure pipelines and CD using the GitOps approach.
 Continuous Integration (CI):
+
+Dev --> Git --> Unit Test --> Static Code Analysis --> Build --> N2N Testing --> Docker image --> Push to artifactory (ACR/ECR/Dockerhub)
+
+
 Developer commits code change on Azure repo/github, 
 Triggers on code changes.
 Clones code from repository.
@@ -14,6 +18,15 @@ Update script for newly created image in the K8s YAML manifest file or Helm char
 
 
 Continuous Delivery (CD):
+
+Repo --> Build --> Push to ECR --> Update (shell) script) --> Repo(looks for Image & integrates to GitOps/ArgoCD) --> GitOps --> K8s
+
+Git repositories as the single source of truth.
+COntinuous reconcilation of ArgoCD to Git and push image to K8s CLuster
+If someone changes the k8s cluster then ArgoCD detects as Drift
+GitOps does not allow manual change to k8s cluster
+ 
+ Git --<-- GitOps(ArgoCD) -->-- K8s
 
 CD Triggers on successful CI completion or manually.
 ArgoCD picks up the new image and deploys into AKS Cluster
@@ -31,6 +44,11 @@ Answer: Explain using Azure Key Vault to store secrets and access them using man
 Scenario: Your application uses Docker containers. How would you integrate ACR with Azure Pipelines for building, pushing, and deploying container images?
 
 Answer: Describe the process of configuring Docker tasks in the pipeline to build images, authenticate with ACR using service connections, push images to the registry, and deploy them to specific environments.
+
+stages:
+  stage:
+    jobs:
+Use connection store    
 
 4. Debugging Pipeline Failures:
 Scenario: Your pipeline consistently fails at a specific stage. How would you approach troubleshooting and identifying the root cause of the issue?

@@ -53,8 +53,10 @@ Commands Used Almost Daily by DevOps Engineers
 | `az pipelines run`              | Trigger Azure DevOps pipelines           |
 
 
+az account set --subscription "Learning Subscription"
 
-# Azure DevOps 
+
+# Azure DevOps   
 Platform which have collection of cloud services used by Devops Engineers will improve the SDLC process & Release cycle time.
 
 Azure Boards: Plan and track tasks. Use agile boards and lists to see who does what.
@@ -140,6 +142,7 @@ You want strong Azure integration.
 You want Entra ID, Azure RBAC, Azure networking, Azure Monitor, ACR, Key Vault, etc.
 You want your team focused more on applications than maintaining Kubernetes control-plane infrastructure.
 “AKS gives us managed Kubernetes control-plane operations and strong Azure integration, so we focus mainly on worker nodes, workloads and application reliability.”
+
 
 
 If multiple Nodes then go for EFS PVC

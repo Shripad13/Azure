@@ -1,0 +1,38 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "parameter": {
+            "type": "string",
+            "defaultValue": "Premium",
+            "allowedValues": [
+                "Standard",
+                "Premium"
+            ],
+            "metadata": {
+                "description": "Tier of storage account"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "resourceName": "[concat('shri', uniqueString(resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "name": "[variables('resourceName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "tags": {
+                "displayName": "abhioshekveeramalla11232"
+            },
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "[concat(parameters('parameter'), '_LRS')]",
+                "tier": "[parameters('parameter')]"
+            }
+        }
+    ],
+    "outputs": {}
+}
