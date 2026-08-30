@@ -1,0 +1,124 @@
+name: $(Build.BuildId)_$(Date:yyyyMMdd)
+
+trigger:
+  - main
+
+pr:
+  - main
+
+variables:
+  # Global static variables
+  - name: azureServiceConnection
+    value: 'MyAzureRMConnection'
+  - name: webAppName
+    value: 'my-production-web-app'
+  - name: resourceGroupName
+    value: 'my-resource-group'
+  # Variable Group reference (ideal for secrets)
+  - group: 'ReleaseSecretsGroup'
+
+stages:
+  # ==========================================
+  # CI STAGE: Build and Test
+  # ==========================================
+  - stage: BuildStage
+    displayName: 'CI - Build & Package'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Artifacts'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - script: |
+              echo "Running unit tests..."
+              npm install
+              npm test
+            displayName: 'Run Tests'
+
+          - script: |
+              echo "Building application..."
+              npm run build
+            displayName: 'Compile Application'
+
+          # Troubleshooting aid: Enable system diagnostics if build fails
+          - task: ArchiveFiles@2
+            displayName: 'Archive Build Outputs'
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/dist'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/drop.zip'
+              replaceExistingArchive: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/drop.zip'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  # ==========================================
+  # CD STAGE: Deployment & Rollback
+  # ==========================================
+  - stage: DeployStage
+    displayName: 'CD - Deploy to Production'
+    dependsOn: BuildStage
+    condition: succeeded()
+    jobs:
+      # Deployment Job automatically hooks into Environment Approvals
+      - deployment: DeployJob
+        displayName: 'Deploy Web App'
+        pool:
+          vmImage: 'ubuntu-latest'
+        # Environment configuration enforces Approvals in Azure DevOps UI
+        environment: 'Production-Environment'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+                  displayName: 'Download CI Artifacts'
+
+                # Troubleshooting aid: Log deployment variables (Excludes secrets)
+                - script: |
+                    echo "======================================"
+                    echo "Target Web App: $(webAppName)"
+                    echo "Resource Group: $(resourceGroupName)"
+                    echo "Service Connection: $(azureServiceConnection)"
+                    echo "Build ID: $(Build.BuildId)"
+                    echo "======================================"
+                  displayName: 'Troubleshooting - Dump Deployment Metadata'
+
+                # Deployment using Service Connection
+                - task: AzureRmWebAppDeployment@4
+                  name: WebAppDeploy
+                  displayName: 'Azure App Service Deploy'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    appType: 'webAppLinux'
+                    WebAppName: '$(webAppName)'
+                    package: '$(Pipeline.Workspace)/drop/drop.zip'
+
+            # Automated Rollback executed only if deployment steps fail
+            on:
+              failure:
+                steps:
+                  - script: echo "##vso[task.logissue type=error]Deployment failed! Initiating rollback..."
+                    displayName: 'Troubleshooting - Log Failure'
+
+                  # Rollback Strategy: Deploy the last known stable build via Azure CLI
+                  - task: AzureCLI@2
+                    displayName: 'Rollback - Revert to Last Successful Deployment'
+                    inputs:
+                      azureSubscription: '$(azureServiceConnection)'
+                      scriptType: 'bash'
+                      scriptLocation: 'inlineScript'
+                      inlineScript: |
+                        echo "Fetching last active slot/deployment deployment swap..."
+                        # Example: Rollback by swapping traffic back to a stable slot
+                        az webapp slot swap \
+                          --resource-group $(resourceGroupName) \
+                          --name $(webAppName) \
+                          --slot staging \
+                          --target-slot production

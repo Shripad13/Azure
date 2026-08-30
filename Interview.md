@@ -62,3 +62,63 @@ Answer: Discuss using tasks like Azure Resource Manager or Terraform tasks to ma
 Scenario: How would you ensure overall security within your Azure Pipelines throughout the CI/CD process, from code building to deployment?
 
 Answer: Discuss a holistic approach, including secure code practices, vulnerability scanning, container image scanning, service principal usage with least privilege, and regular pipeline audits.
+
+
+10. What are Azure DevOps service connections?
+
+"A service connection provides Azure DevOps pipelines with an authenticated way to access external services such as Azure subscriptions, container registries or other platforms.
+
+ I prefer a dedicated identity with only the permissions required for the pipeline."
+
+11. Azure RBAC - Authorization
+Azure RBAC controls who can perform which actions on which Azure resources.
+
+Conceptually, an RBAC assignment consists of a security principal, a role definition and a scope.
+
+For example, instead of giving someone Owner access to an entire subscription, I might give the required team Contributor or a more specific custom role at the appropriate resource-group scope.
+
+I always try to follow least privilege and assign access at the lowest practical scope."
+
+10. Azure Policy vs RBAC
+
+RBAC controls who can perform an action.
+Azure Policy controls what configurations or resources are allowed or required.
+
+11. Key Vault - Secrets
+"I prefer using managed identity wherever supported.
+
+The application or Azure resource gets an identity, and that identity is granted only the required Key Vault permissions.
+
+The application then accesses the secret without requiring us to embed credentials in source code or pipeline YAML.
+
+Access is controlled through appropriate authorization and monitored through Azure logging."
+
+12. Managed Identity - Authentication
+    "Managed identity provides an Azure-managed identity for a resource so that it can authenticate to Azure services without us having to store credentials.
+
+There are two common types — system-assigned and user-assigned.
+
+System-assigned identity is tied to the lifecycle of the resource, while 
+user-assigned identity is a separate Azure resource that can be associated with multiple supported resources.
+
+I prefer managed identity when supported because it reduces credential management and supports a stronger least-privilege model."
+
+13. Azure Policy scenario - Governance
+"I would implement an Azure Policy requiring the mandatory tags.
+
+Depending on the requirement, the policy can audit existing resources, deny non-compliant resource creation or modify resources where supported.
+
+I would first use audit mode to understand the existing compliance state before moving to deny mode, because immediately enforcing deny could unexpectedly block existing deployment processes."
+
+12. How do you retrieve a secret in YAML?
+"I don't hardcode the secret in YAML.
+
+pulling secrets directly from Azure Key Vault into your pipeline job using the **AzureKeyVault@2** task
+ retrieve the required secret at runtime and make it available only to the required task.
+
+Ensure your Azure Resource Manager Service Connection has Get and List permissions on your Key Vault access policy or Azure RBAC
+
+
+"If it's a deployment-time secret, I can integrate the pipeline with Key Vault. If it's required by the application at runtime, I'd preferably make the application retrieve it securely using managed identity where the architecture supports it."
+
+13. How do you secure Azure DevOps?

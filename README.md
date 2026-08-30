@@ -65,6 +65,24 @@ Azure Artifacts: Share code packages with your team.
 
 
 # Azure Micorsoft Entra ID (IAM)-
+
+ Terraform +--------> Azure Infrastructure
+
+ Key Vault +--------> Secrets
+ 
+ Managed Identity +--------> Authentication
+
+ Azure RBAC +--------> Authorization
+
+ Azure Policy +--------> Governance
+
+ Azure Monitor +--------> Metrics / Alerts
+
+ Log Analytics +--------> Centralized Logs
+  
+ Application Insights +--------> Application Telemetry
+ 
+
 Who is a human? → User
 
 How do I manage permissions for many humans? → Group
@@ -74,6 +92,7 @@ Who is an application/automation? → Service Principal
 Who is an Azure resource that needs an identity? → Managed Identity
 
 What can that identity do? → Role / Azure RBAC
+
 
 
 Microsoft specifically recommends **managed identities** for service-to-service communication where Azure resources support Entra authentication, because Azure manages the credentials and you don't have to store or rotate secrets.
@@ -88,7 +107,7 @@ Verification - ssh to VM and Fetch the access token first then using curl comman
 1. Fetch the access token
 access_token=$(curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fstorage.azure.com%2F' -H Metadata:true | jq -r '.access_token')
 
-2. Access the blob from Virtual Machine
+1. Access the blob from Virtual Machine
 curl "https://$storage_account_name.blob.core.windows.net/$container_name/$blob_name" -H "x-ms-version: 2017-11-09" -H "Authorization: Bearer $access_token"
 
 
@@ -180,4 +199,52 @@ We will assign the Secret provider Class to the pod and within pod it should acc
 1. Platform agnostics - supports multi-cloud   
 2. Reusability
 3. Version controlled
-4. 
+
+# how to store terraform state file in azure portal with locking
+Use an Azure Storage Account with a Blob Container. 
+State locking happens automatically in Azure;
+
+1. 1. Create the Azure Storage Infrastructure
+   # Create a Resource Group
+ $ az group create --name tf-state-rg --location eastus
+
+# Create a unique Storage Account (Must be globally unique, 3-24 lowercase letters/numbers)
+  $ az storage account create --resource-group tf-state-rg --name mystateaccount123 --sku Standard_LRS --encryption-services blob
+
+# Create a Blob Container inside the Storage Account
+  $ az storage container create --name tfstate --account-name mystateaccount123
+
+2. 2. Configure the Terraform Backend
+   In your Terraform configuration files (usually in a main.tf or backend.tf file), add the azurerm backend block.
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+
+  # Define the remote backend
+  backend "azurerm" {
+    resource_group_name  = "tf-state-rg"
+    storage_account_name = "mystateaccount123"
+    container_name       = "tfstate"
+    key                  = "prod.terraform.tfstate" # Name of your state file
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+3. Initialize and Migrate State
+ terraform init
+
+4. Verification and How Locking Works
+   Once initialized, any time you run terraform plan, terraform apply, or terraform destroy, Terraform will reach out to Azure and acquire a Blob Lease.
+
+   Viewing the Lock: If you go to the Azure Portal, navigate to your Storage Account → Containers → tfstate, and click on your state file during an ongoing deployment, you will see its Lease State marked as Leased.
+
+To forcefully unlock the lease
+   terraform force-unlock <LOCK_ID>
+
