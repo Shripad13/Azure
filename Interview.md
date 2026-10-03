@@ -140,3 +140,53 @@ Ensure your Azure Resource Manager Service Connection has Get and List permissio
 "If it's a deployment-time secret, I can integrate the pipeline with Key Vault. If it's required by the application at runtime, I'd preferably make the application retrieve it securely using managed identity where the architecture supports it."
 
 13. How do you secure Azure DevOps?
+
+ requires a defense-in-depth approach covering identity, pipeline security, source code protection, and audit governance.
+
+1. Identity & Access (The Perimeter)
+• Centralised Auth: First, I always link Azure DevOps to Microsoft Entra ID rather than using personal Microsoft accounts. This ensures that when an employee leaves the company, their access is revoked instantly.
+• Least Privilege: I apply strict Conditional Access policies (like enforcing MFA) and strictly enforce the Principle of Least Privilege, making sure users are scoped properly and never blindly thrown into the 'Project Administrators' group.
+
+
+2. Pipeline Security (The Execution)
+• Project Isolation: By default, I turn on settings to limit the job authorization scope to the current project. This prevents a compromised pipeline in Project A from modifying resources or code in Project B.
+• Secret Management: I completely eliminate long-lived passwords and secrets. For cloud deployments, I use Workload Identity Federation for Azure Service Connections, which leverages short-lived, automated OIDC tokens. For application secrets, I map them dynamically from Azure Key Vault rather than hardcoding them in pipeline variables.
+• Deployment Gates: I enforce Approvals and Checks on Environments and Service Connections so code cannot touch production without manual sign-off or passing compliance checks.
+
+
+3. Repository & Code Security (The Supply Chain)
+• Branch Policies: I enforce strict branch policies on main branches. Nobody pushes code directly; it must go through a Pull Request (PR) with mandatory peer reviews and a passing build validation pipeline.
+
+4. Governance & Auditing (The Trail)
+• Finally, for monitoring, I configure Azure DevOps Audit Streams to forward all organization logs into an Azure Log Analytics Workspace. This lets us track high-risk changes, like who modified permissions or deleted a repository, in real-time."
+
+
+1.  how do you write in approvals in Azure DevOps pipelines YAML file?
+Step 1: Configure the Approval in the UI
+Step 2: Reference the Environment in Your YAML File
+Once the UI check is created, lock down a specific stage or job in your YAML pipeline by targeting that environment using the environment property.
+When the pipeline reaches this stage, it will automatically pause and wait for the designated users to click "Approve".
+
+trigger:
+- main
+
+stages:
+- stage: BuildStage
+  jobs:
+  - job: BuildJob
+    steps:
+    - script: echo "Building the application..."
+
+- stage: DeployToProd
+  dependsOn: BuildStage
+  jobs:
+  - deployment: DeployJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    # This environment name MUST perfectly match the name created in the Azure DevOps UI
+    environment: 'Production' 
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Deploying to Production because approval was granted!"

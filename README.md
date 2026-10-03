@@ -251,3 +251,8 @@ provider "azurerm" {
 To forcefully unlock the lease
    terraform force-unlock <LOCK_ID>
 
+
+
+# Azure Resource Manager (ARM)
+It  is the main deployment and management service for Microsoft Azure. 
+It acts as a central control layer that lets you create, update, and delete resources like virtual machines, databases, and storage accounts in your Azure account.

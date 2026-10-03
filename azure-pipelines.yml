@@ -1,0 +1,171 @@
+trigger:
+  - main
+
+variables:
+
+  azureServiceConnection: 'azure-service-connection'
+
+  resourceGroup: 'rg-devops-demo'
+
+  aksCluster: 'aks-devops-demo'
+
+  acrName: 'devopsdemoacr12345'
+
+  containerRepository: 'myapp'
+
+  imageTag: '$(Build.BuildId)'
+
+  terraformDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+
+
+stages:
+
+# ============================================================
+# STAGE 1 - TERRAFORM
+# ============================================================
+
+- stage: Terraform
+  displayName: 'Provision Azure Infrastructure'
+
+  jobs:
+
+  - job: Terraform
+    displayName: 'Terraform Apply'
+
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+
+    - checkout: self
+
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: 'latest'
+
+    - script: |
+        terraform init
+      displayName: 'Terraform Init'
+      workingDirectory: $(terraformDirectory)
+
+    - script: |
+        terraform validate
+      displayName: 'Terraform Validate'
+      workingDirectory: $(terraformDirectory)
+
+    - script: |
+        terraform plan
+      displayName: 'Terraform Plan'
+      workingDirectory: $(terraformDirectory)
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Apply'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+
+        inlineScript: |
+
+          terraform apply \
+            -auto-approve
+      workingDirectory: $(terraformDirectory)
+
+
+# ============================================================
+# STAGE 2 - BUILD DOCKER IMAGE
+# ============================================================
+
+- stage: Build
+  displayName: 'Build and Push Docker Image'
+
+  dependsOn: Terraform
+
+  jobs:
+
+  - job: DockerBuild
+
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+
+    - checkout: self
+
+    - task: Docker@2
+      displayName: 'Build and Push Image'
+
+      inputs:
+
+        containerRegistry: 'acr-service-connection'
+
+        repository: $(containerRepository)
+
+        command: buildAndPush
+
+        Dockerfile: '**/Dockerfile'
+
+        tags: |
+          $(imageTag)
+          latest
+
+
+# ============================================================
+# STAGE 3 - DEPLOY TO AKS
+# ============================================================
+
+- stage: Deploy
+  displayName: 'Deploy Application to AKS'
+
+  dependsOn: Build
+
+  jobs:
+
+  - deployment: DeployToAKS
+
+    displayName: 'Deploy to AKS'
+
+    environment: 'aks-dev'
+
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    strategy:
+
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          - checkout: self
+
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Application'
+
+            inputs:
+
+              action: deploy
+
+              connectionType: azureResourceManager
+
+              azureSubscriptionConnection: $(azureServiceConnection)
+
+              azureResourceGroup: $(resourceGroup)
+
+              kubernetesCluster: $(aksCluster)
+
+              namespace: default
+
+              manifests: |
+
+                $(System.DefaultWorkingDirectory)/k8s/deployment.yaml
+
+                $(System.DefaultWorkingDirectory)/k8s/service.yaml
+
+              containers: |
+
+                $(acrName).azurecr.io/$(containerRepository):$(imageTag)
+
+              rolloutStatusTimeout: '120'
