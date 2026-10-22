@@ -96,6 +96,16 @@ Who is an Azure resource that needs an identity? → Managed Identity
 What can that identity do? → Role / Azure RBAC
 
 
+# Azure Service Principal :
+An Azure Service Principal is a non-human identity created within Microsoft Entra ID (formerly Azure Active Directory) that allows applications, hosted services, and automated tools to access specific Azure resources securely
+
+where it runs -Anywhere (On-premises, GitHub, AWS, Google Cloud, or Azure)
+Credentials Management is	Manual (Your team must generate, store, and rotate secrets/certificates)
+
+ If your code is running on an Azure service, always use a Managed Identity. 
+ If your code runs outside of Azure (like an on-premises server or an external DevOps runner), use a Service Principal.
+
+# Managed identities :
 
 Microsoft specifically recommends **managed identities** for service-to-service communication where Azure resources support Entra authentication, because Azure manages the credentials and you don't have to store or rotate secrets.
 
@@ -256,3 +266,5 @@ To forcefully unlock the lease
 # Azure Resource Manager (ARM)
 It  is the main deployment and management service for Microsoft Azure. 
 It acts as a central control layer that lets you create, update, and delete resources like virtual machines, databases, and storage accounts in your Azure account.
+
+

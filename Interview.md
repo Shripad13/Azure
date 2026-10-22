@@ -190,3 +190,172 @@ stages:
         deploy:
           steps:
           - script: echo "Deploying to Production because approval was granted!"
+
+
+
+1. What is the fundamental hierarchy of an Azure DevOps YAML pipeline?
+• Pipeline: The top-level workflow definition file (azure-pipelines.yml).
+• Stage: A logical boundary in the pipeline (e.g., Build, Test, Deploy) that lets you group jobs and set environment-level gates.
+• Job: An execution unit that runs on a single agent or as an agentless task. Jobs can run sequentially or in parallel.
+• Step: A linear sequence of operations inside a job, which can be either a Script (Bash, PowerShell, CLI) or a Task (pre-packaged building block like PublishBuildArtifacts@1 or Docker@2).
+
+
+2. What is the difference between a task, a script, and a template?
+• Task: A pre-packaged, versioned script or action provided by Microsoft or the Marketplace (e.g., AzureWebApp@1, DotNetCoreCLI@2). It abstracts underlying commands and handles input validation cleanly.
+• Script: Raw shell, Bash, or PowerShell commands (script:, bash:, powershell:) used when you need custom logic or fine-grained CLI control that doesn't have a dedicated task.
+• Template: A reusable YAML snippet (template: my-steps.yml) used to DRY (Don't Repeat Yourself) pipeline code across multiple repositories or builds.
+
+3. How do you pass data or variables from one task or job to another?
+  Q..  How do you set a variable in one task and read it in a subsequent task—or across different jobs?
+  Across Jobs (Job A to Job B): You must map the output variable from the source job:
+
+# Job A sets it
+- script: echo "##vso[task.setvariable variable=myVar;isOutput=true]Hello"
+  name: setvarStep
+
+# Job B reads it
+steps:
+- script: echo $(jobA.setvarStep.myVar)
+  dependsOn: JobA
+  condition: succeeded()
+
+4. How do you handle secrets securely inside pipeline tasks?
+
+• Never hardcode secrets in YAML files.
+• Define them in Variable Groups linked to Azure Key Vault, or mark them as secret: true in the pipeline variables UI.
+• To map a secret variable into a task or script, pass it explicitly via the env: 
+# mapping:
+steps:
+- script: echo "Running secure command"
+  env:
+    MY_SECRET_TOKEN: $(MySecretVariableFromVault)
+
+5. What happens when a task fails midway through a job, and how do you customize that behavior?
+
+• By default, if a task fails, all subsequent tasks in that job are skipped, and the job fails.
+• You can override this behavior using the condition: property with built-in functions like always(), failed(), or succeededOrFailed():
+
+- script: echo "This runs even if the previous task failed"
+  condition: always()
+
+
+6. Scenario-Based: "A build task takes 20 minutes to run. How would you troubleshoot and optimize it?"
+
+• Analyze Timestamps: Use the Azure DevOps pipeline run UI to inspect the duration of each individual task (e.g., package restore vs. test execution).
+• Enable Caching: Use the Cache@2 task to cache heavy dependencies (like ~/.m2 for Maven, node_modules for Node.js, or NuGet packages) across runs.
+• Parallelize Jobs: Split unit tests, integration tests, and linting into separate parallel jobs across multiple agent slots instead of running them serially in a single job.
+• Upgrade Agents: Move from shared/standard Microsoft-hosted agents to higher-spec private/self-hosted agents or scale-set agents if disk I/O or CPU is the bottleneck.
+
+
+7. How to run the parallel jobs in YAML?
+   
+To run unit tests, integration tests, and linting in parallel, you define them as separate jobs within the same stage and configure them to have no dependencies on each other. 
+
+  By default, jobs inside a stage run concurrently if your Azure DevOps organization has enough parallel agent slots available.   
+
+
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: QualityGates
+  displayName: 'Code Quality and Testing'
+  jobs:
+
+  # Job 1: Runs Linting
+  - job: RunLinting
+    displayName: 'Code Linting'
+    steps:
+    - script: |
+        echo "Running ESLint / Code analysis..."
+        # npm run lint
+      displayName: 'Execute Linter'
+
+  # Job 2: Runs Unit Tests (Runs in parallel with Linting)
+  - job: RunUnitTests
+    displayName: 'Unit Testing'
+    steps:
+    - script: |
+        echo "Running Unit Tests..."
+        # npm run test:unit
+      displayName: 'Execute Unit Tests'
+
+  # Job 3: Runs Integration Tests (Runs in parallel with Linting and Unit Tests)
+  - job: RunIntegrationTests
+    displayName: 'Integration Testing'
+    steps:
+    - script: |
+        echo "Running Integration Tests..."
+        # npm run test:integration
+      displayName: 'Execute Integration Tests'
+
+
+# lets i have project A inside that repository X and artefact generates in project A in repository X , how can i write in Azure DevOps pipeline YAML to use in Project B repository Y?
+
+you must define Project A's pipeline as a pipeline resource in your Project B YAML file
+
+Here is how you can write the YAML pipeline for Project B, followed by the mandatory security permissions you need to enable in Azure DevOps for it to work.
+
+
+Step 1: Write the YAML in Project B (Repository Y)
+
+Add this structure to your azure-pipelines.yml file inside Project B. This configuration establishes a reference to Project A and uses the download task to fetch the generated artifact.
+
+trigger:
+  - main  # Triggers when code is pushed to Project B's repository Y
+
+# 1. Define the upstream pipeline resource from Project A
+resources:
+  pipelines:
+    - pipeline: UpstreamArtifactResource # Local alias identifier for this resource
+      project: Project A                 # EXACT name of the source Azure DevOps Project
+      source: Name-Of-Pipeline-In-ProjectA # EXACT name of the pipeline that produces the artifact
+      trigger: true                      # Optional: Set to true if Project B should run automatically whenever Project A finishes
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+  - job: UseArtifact
+    displayName: 'Download and Use Artifact from Project A'
+    steps:
+      # 2. Download the artifact using the resource alias
+      - download: UpstreamArtifactResource
+        artifact: drop  # Replace with the exact name of the artifact published in Project A
+        displayName: 'Download Project A Artifact'
+
+      # 3. Verify or use the downloaded artifact
+      - script: |
+          echo "Listing downloaded files:"
+          ls -R $(Pipeline.Workspace)/UpstreamArtifactResource
+        displayName: 'List Downloaded Artifact Files'
+
+
+When you use the - download keyword:
+• The artifact is automatically downloaded into the standard workspace directory:
+$(Pipeline.Workspace)/<pipeline-resource-alias>/<artifact-name>
+• Following the example above, your files will be available at:
+$(Pipeline.Workspace)/UpstreamArtifactResource/drop
+
+
+Step 2: Fix the Security Permissions (Mandatory)
+By default, Azure DevOps isolates project scopes for security. If you run the pipeline in Project B now, it will fail with an "Artifact not found" or "Access Denied" error. You must grant Project B permission to read from Project A
+
+
+1. Disable "Limit Job Authorization Scope"
+
+1. Go to Project Settings in Project B.
+2. Click on Settings under the Pipelines menu section.
+3. Scroll down to Limit job authorization scope to current project for non-release pipelines and toggle it OFF.
+(Note: If this option is locked, your Organization Administrator must turn it off at the Organization Settings level).
+
+2. Grant the Build Service Account Access to Project A
+
+1. Navigate to Project A -> Project Settings.
+    Go to Pipelines -> Settings.
+2. Under Limit job authorization scope..., ensure it is toggled OFF here as well so Project A can share data out.
+3. If you encounter tight project security restrictions, go to Project A -> Project Settings -> Permissions -> Users. Find the user named Project B Build Service (<Your-Org-Name>) and explicitly grant it View project-level information and Read permissions for the pipelines.
