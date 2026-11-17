@@ -359,3 +359,140 @@ By default, Azure DevOps isolates project scopes for security. If you run the pi
     Go to Pipelines -> Settings.
 2. Under Limit job authorization scope..., ensure it is toggled OFF here as well so Project A can share data out.
 3. If you encounter tight project security restrictions, go to Project A -> Project Settings -> Permissions -> Users. Find the user named Project B Build Service (<Your-Org-Name>) and explicitly grant it View project-level information and Read permissions for the pipelines.
+
+
+
+# what is Service Mesh in kubernetes?
+A Service Mesh in Kubernetes is an infrastructure layer that manages communication between microservices running inside a Kubernetes cluster.
+In simple terms, Kubernetes manages containers and workloads, while a Service Mesh manages communication between those workloads.
+
+It provides features such as:
+- Service-to-service communication.
+- Traffic management.
+- Mutual TLS (mTLS) security.
+- Load balancing.
+- Retries and timeouts.
+- Circuit breaking.
+- Traffic monitoring and observability.
+
+1. Why do we need a Service Mesh?
+Imagine you have an application running on Kubernetes with multiple microservices.
+
+or example:
+- Frontend service
+- Payment service
+- Order service
+- Inventory service
+- User service
+These services communicate with each other.
+
+Without a Service Mesh, developers often need to implement communication-related features separately in each application.
+
+3. What are the popular Service Mesh tools?
+   Istio, Linkerd, Consul
+
+# How can you ensure runtime security in AKS?
+- Use Microsoft Defender for containers to detect runtime threats   
+- Set resource limits for CPU & memory to prevent resource abuse
+- Run containers as non -root whenever possible
+- Enbale audit logging and integrate with SIEM solutions
+- Apply read only fole systems to minimize risk of tampering
+  
+# What tools Can you use to monitor AKS?
+Azure Monitor - For CLuster performance metrics
+Container insights - For Pod level telemtry & logs
+Prometheus & Grafana - For custom monitoring dashboards
+KubeAudit & Kub-bench - For auditing configurations & security benchmarks
+
+THese tools help manitain visibility across your cloud-native apps & infra
+
+# What are some best practices for AKS cluster security?
+1. Use node pools with minimal privileges
+2. Isolate workloads using namespaces and network policies
+3. Regularly scan images and workloads for vulnerabilities
+4. Enable auto-updates for clusters and node pools
+5. APply RBAC and restrict access to the k8s API
+
+# How would you handle a vulnerability discovered in a running container?
+Identify the affected pod using monitoring tools
+Stop the workload
+Patch the image in the CICD pipeline
+Rebuild and redeploy from the updated image
+Audit access logs and cluster events for further investigation
+
+
+# Application is on On Premise and Databse is restored on Azure VM , how do you establish the connection with name? This should be done on Internal network only. What changes will you do in network?
+
+# 2 containers in 1 Pod, now how they communicate with each other?
+
+# what is service discovery in AKS?
+Service Discovery in AKS is the mechanism through which one application or microservice finds and communicates with another service without needing to know its actual Pod IP address.
+
+  curl http://backend-service.dev.svc.cluster.local:8080
+
+
+# Maintainence of AKS cluster, how do you do version upgrade?
+
+# Service ingress urls are not coming up and giving errors, saying they are not able to monut the data to container, In that scenario how do you troubleshoot and fix?
+
+# Application deployed on AKS, and need to congiure on Application gateway, what all components would you configure?
+
+# Microsoft Azure Application Gateway has two generations :
+For a new enterprise deployment, I would recommend Application Gateway WAF_v2.
+2. What are the important v2 features?
+- Autoscaling based on traffic.
+- Availability Zone redundancy where supported.
+- Static frontend VIP.
+- TLS termination and end-to-end TLS.
+- Azure Key Vault certificate integration.
+- WAF protection.
+- URL-based and host-based routing.
+- Header rewriting.
+- Managed identity integration.
+- mTLS support.
+
+"The current generation of Azure Application Gateway is v2. For enterprise production workloads, we generally consider Standard_v2 or WAF_v2 depending on the security requirements.
+
+I would prefer WAF_v2 for internet-facing applications because it provides Layer 7 load balancing along with Web Application Firewall protection.
+
+It supports autoscaling, zone redundancy, static frontend IP, TLS termination, Key Vault certificate integration and host-based or path-based routing.
+
+For AKS integration, I would evaluate Application Gateway Ingress Controller or the newer Application Gateway for Containers, depending on the platform architecture and requirements.
+
+I would also configure health probes, backend pools, routing rules, NSGs, managed identities and monitoring to ensure secure and highly available application delivery."
+
+# Azure native monitoring solutions
+
+
+# When an Azure Virtual Network (VNet) or subnet runs out of IP addresses?
+
+1. Add Additional Address Spaces to the VNet
+You can add new CIDR block ranges to an existing Azure VNet without disrupting running workloads.
+• How it works: Go to your VNet in the Azure portal or use PowerShell/Azure CLI/Terraform to add a new address space (for example, adding 10.2.0.0/16 to a VNet that originally used 10.1.0.0/16).
+
+• Next step: Once added, you can either create new subnets out of the new range or resize existing subnets if the new range is contiguous (though shrinking or resizing existing subnet prefixes has strict limitations, adding new subnets is straightforward)
+
+
+
+2. Add New Subnets or Resize Subnets
+
+• Check if you have unused space within your current VNet address ranges that hasn't been carved out into subnets yet.
+
+• Remember that Azure reserves 5 IP addresses in every subnet (the network address, default gateway, two Azure DNS mappings, and the broadcast address), so choose larger subnet sizes (e.g., a /24 or /23) to prevent running out quickly.
+
+
+
+3. Use VNet Peering with Subnet Exclusion or Overlapping Design
+
+If you are running out of routable RFC 1918 space (like 10.0.0.0/8) across your enterprise:
+• IPv4 Subnet Peering: Exclude specific subnets from a VNet peering relationship so you can reuse non-routable or isolated IP ranges across multiple spoke VNets without routing conflicts.
+
+• Azure Private Link Services: Deploy isolated VNets that use overlapping or arbitrary IP address spaces, and connect them to your main network securely using private endpoints without merging the IP spaces.
+
+
+
+4. Optimize High-Consumption Services
+
+• AKS (Azure Kubernetes Service): If using traditional kubernetes CNI where pods consume VNet IPs, migrate to Azure CNI Overlay, which decouples pod IP addresses from the VNet space.
+• Clean up resources: Delete orphaned network interface cards (NICs), old load balancers, or deallocated virtual machines that continue to reserve private IPs. 
+• IPAM Tracking: Use Azure Virtual Network Manager IPAM to centrally track and audit non-overlapping allocations

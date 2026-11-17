@@ -137,3 +137,51 @@ EOF
  # Delete the AKS Cluster
 
   $ az group delete --name keyvault-demo 
+
+
+
+# Most common causes of CrashLoopBackOff error are grouped below by their underlying trigger:  
+error occurs when a Kubernetes pod fails to start properly, crashes, and then repeatedly attempts to restart in a loop. 
+
+
+1. Application and Code Issues
+
+• Runtime Errors: The application throws an unhandled exception or panic immediately upon startup (e.g., a missing syntax element or unhandled null pointer).
+• Missing Dependencies: The application requires specific packages, libraries, or external binaries that were not included in the container image.
+• Database/API Unavailability: The code is written to exit/fail immediately if it cannot connect to its database or an external dependency upon initialization, rather than waiting or retrying gracefully. 
+
+
+2. Configuration and Environment Faults
+
+• Missing Environment Variables: The application expects certain config variables (like credentials or API keys) that were not injected into the pod specification.
+• Incorrect File Paths: The application tries to read a configuration file or certificate from a path that does not exist inside the container.
+• Secret or ConfigMap Mistakes: The pod references a Secret or ConfigMap that has not been created yet or has a typo in its name.
+
+
+3. Container and Image Misconfigurations
+
+• Wrong Entrypoint or Command: The command or args defined in the Kubernetes YAML are incorrect, making the container attempt to run a non-existent file or use invalid flags.
+• Missing Command-Line Arguments: The container starts but immediately exits because it wasn’t provided with required startup parameters.
+• Short-lived Containers: The container successfully runs a brief script (like an setup script) and exits normally with an exit code of 0. Because Kubernetes expects a deployment container to run indefinitely, it views any exit as a failure and restarts it. (Note: For short tasks, a Kubernetes Job should be used instead of a Deployment).
+
+
+4. Resource Overload
+
+• Out of Memory (OOMKilled): The container tries to use more memory than its defined Kubernetes limits.memory. The Linux kernel terminates the process, causing the pod to crash.
+• CPU Throttling/Starvation: While rare for CPU to cause an outright crash, severe resource starvation can cause startup scripts to time out and fail.
+
+
+5. Health Check Failures
+
+• Failed Liveness Probes: The pod starts up, but its livenessProbe fails repeatedly (due to a wrong port, tight timeout, or slow application startup). Kubernetes assumes the pod is dead and kills it, triggering the crash loop.
+
+
+
+# Troubleshooting Checklist
+
+ $ kubectl describe pod <pod-name>
+ $ kubectl logs <pod-name> --previous
+
+# What Challenges have you faced when working with AKS?
+
+Working with AKS can be challenging due to its complexity.
